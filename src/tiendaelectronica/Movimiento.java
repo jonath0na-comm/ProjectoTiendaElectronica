@@ -3,7 +3,9 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JDialog.java to edit this template
  */
 package tiendaelectronica;
-
+import java.io.BufferedReader;
+import java.io.FileReader;
+import javax.swing.table.DefaultTableModel;
 /**
  *
  * @author Jonat
@@ -18,7 +20,49 @@ public class Movimiento extends javax.swing.JDialog {
     public Movimiento(java.awt.Frame parent, boolean modal) {
         super(parent, modal);
         initComponents();
+         // Configurar columnas de la tabla
+    DefaultTableModel modelo = new DefaultTableModel();
+    modelo.addColumn("Código");
+    modelo.addColumn("Descripción");
+    modelo.addColumn("Stock Actual");
+    modelo.addColumn("Stock Mínimo");
+    modelo.addColumn("Estado");
+
+    jTable1.setModel(modelo);
+
+    // Cargar datos automáticamente
+    cargarStock();
     }
+      // ═════════════════════════════════════════════
+    // CARGAR STOCK — lee productos.csv y llena la tabla
+    // Muestra: Código, Descripción, Stock Actual, Stock Mínimo, Estado
+    // ═════════════════════════════════════════════
+    public void cargarStock() {
+        DefaultTableModel modelo = (DefaultTableModel) jTable1.getModel();
+        modelo.setRowCount(0);
+        try {
+            BufferedReader br = new BufferedReader(new FileReader("productos.csv"));
+            String linea;
+            while ((linea = br.readLine()) != null) {
+                if (linea.trim().isEmpty()) continue;
+                String[] d = linea.split(",", -1);
+                if (d.length >= 9) {
+                    // d[0]=Código  d[1]=Descripción  d[5]=StockActual  d[6]=StockMínimo  d[8]=Estado
+                    modelo.addRow(new Object[]{
+                        d[0].trim(),
+                        d[1].trim(),
+                        d[5].trim(),
+                        d[6].trim(),
+                        d[8].trim()
+                    });
+                }
+            }
+            br.close();
+        } catch (Exception e) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Error cargando stock");
+        }
+    }
+ 
 
     /**
      * This method is called from within the constructor to initialize the form.

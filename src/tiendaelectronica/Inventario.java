@@ -4,6 +4,12 @@
  */
 package tiendaelectronica;
 
+import java.io.*;
+import java.time.LocalDate;
+import java.util.*;
+import javax.swing.JOptionPane;
+import javax.swing.table.DefaultTableModel;
+
 /**
  *
  * @author Jonat
@@ -11,14 +17,343 @@ package tiendaelectronica;
 public class Inventario extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Inventario.class.getName());
-
+      
+    private static final String INVENTARIO_CSV = "productos.csv";
+    private static final String ENCABEZADO_CSV = "MovimientoInventarioEncabezado.csv";
+    private static final String DETALLE_CSV    = "MovimientoInventarioDetalle.csv";
+   
+    private DefaultTableModel modeloRemision = new DefaultTableModel();
+    
     /**
      * Creates new form Inventario
      */
+    
     public Inventario() {
         initComponents();
         jTextField1.requestFocus();
+        // Tabla de remisión: columnas Cantidad y Producto
+        modeloRemision.addColumn("Cantidad");
+        modeloRemision.addColumn("Producto");
+        jTable1.setModel(modeloRemision);
+        // Fecha de hoy por defecto
+        jTextField4.setText(LocalDate.now().toString());
+        // Número de movimiento autogenerado (no editable)
+        jTextField5.setEditable(false);
+        jTextField5.setText(String.valueOf(generarNumeroMovimiento()));
+ 
     }
+    // 1. GENERAR número de movimiento Lee el encabezado, obtiene el número más alto y suma 1
+    private int generarNumeroMovimiento() {
+        int max = 0;
+        try {
+            File f = new File(ENCABEZADO_CSV);
+            if (!f.exists()) return 1;
+            BufferedReader br = new BufferedReader(new FileReader(f));
+            String linea;
+            boolean primera = true;
+            while ((linea = br.readLine()) != null) {
+                if (primera) { primera = false; continue; }
+                String[] p = linea.split(",", -1);
+                if (p.length > 0 && !p[0].trim().isEmpty()) {
+                    try {
+                        int n = Integer.parseInt(p[0].trim());
+                        if (n > max) max = n;
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+            br.close();
+        } catch (Exception ignored) {}
+        return max + 1;
+    }
+    // 2. BUSCAR producto por código en producto Llena jTextField3 con el nombre del producto
+    private void buscarProducto() {
+        String codigo = jTextField1.getText().trim();
+        if (codigo.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Ingresa un código de producto");
+            return;
+        }
+        try {
+            File f = new File(INVENTARIO_CSV);
+            if (!f.exists()) {
+                JOptionPane.showMessageDialog(this, "No existe " + INVENTARIO_CSV);
+                return;
+            }
+            BufferedReader br = new BufferedReader(new FileReader(f));
+            String linea;
+            while ((linea = br.readLine()) != null) {
+                String[] d = linea.split(",", -1);
+                if (d[0].trim().equals(codigo)) {
+                    jTextField3.setText(d[1].trim());
+                    br.close();
+                    jTextField2.requestFocus();
+                    return;
+                }
+            }
+            br.close();
+            JOptionPane.showMessageDialog(this, "Código no encontrado: " + codigo);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error buscando producto");
+        }
+    }
+    // 3. AGREGAR producto a la tabla de remisión
+    private void agregarRemision() {
+        String codigo  = jTextField1.getText().trim();
+        String nombre  = jTextField3.getText().trim();
+        String cantTxt = jTextField2.getText().trim();
+ 
+        if (codigo.isEmpty() || nombre.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Primero busca un producto válido");
+            return;
+        }
+        if (cantTxt.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Ingresa la cantidad");
+            return;
+        }
+        try {
+            int cantidad = Integer.parseInt(cantTxt);
+            if (cantidad <= 0) {
+                JOptionPane.showMessageDialog(this, "La cantidad debe ser mayor a 0");
+                return;
+            }
+            modeloRemision.addRow(new Object[]{cantidad, codigo + " - " + nombre});
+            jTextField1.setText("");
+            jTextField2.setText("");
+            jTextField3.setText("");
+            jTextField1.requestFocus();
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "La cantidad debe ser un número entero");
+        }
+    }
+    // 4. GUARDAR MOVIMIENTO COMPLETO Valida → escribe CSVs → actualiza stock
+    private void guardarMovimiento() {
+        String numeroTxt = jTextField5.getText().trim();
+        String fecha     = jTextField4.getText().trim();
+        String tipo      = jComboBox1.getSelectedItem().toString();
+        String motivo    = "";
+ 
+        if (fecha.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "La fecha es obligatoria");
+            return;
+        }
+        if (tipo.equals("Ajuste") && motivo.isEmpty()) {
+        }
+        if (modeloRemision.getRowCount() == 0) {
+            JOptionPane.showMessageDialog(this, "Agrega al menos un producto a la remisión");
+            return;
+        }
+        int numero = Integer.parseInt(numeroTxt);
+        if (numeroYaExiste(numero)) {
+            JOptionPane.showMessageDialog(this, "El número de movimiento ya existe");
+            return;
+        }
+        Map<String, Integer> remision = new LinkedHashMap<>();
+        for (int i = 0; i < modeloRemision.getRowCount(); i++) {
+            int cant   = Integer.parseInt(modeloRemision.getValueAt(i, 0).toString());
+            String cod = modeloRemision.getValueAt(i, 1).toString().split(" - ")[0].trim();
+            remision.put(cod, cant);
+        }
+        List<String[]> inventario = leerInventario();
+        if (inventario == null) return;
+        for (Map.Entry<String, Integer> entry : remision.entrySet()) {
+            String cod  = entry.getKey();
+            int    cant = entry.getValue();
+            String[] prod = buscarEnInventario(inventario, cod);
+            if (prod == null) {
+                JOptionPane.showMessageDialog(this, "Producto no encontrado: " + cod);
+                return;
+            }
+            if (!tipo.equals("Ajuste") && prod[8].trim().equalsIgnoreCase("INACTIVO")) {
+                JOptionPane.showMessageDialog(this,
+                    "El producto " + cod + " está deshabilitado.\nSolo permite Ajustes.");
+                return;
+            }
+            int stockActual = Integer.parseInt(prod[5].trim());
+            int stockMinimo = Integer.parseInt(prod[6].trim());
+            if (tipo.equals("Entrada") && (stockActual + cant) > (stockMinimo * 3)) {
+                int opc = JOptionPane.showConfirmDialog(this,
+                    "El stock de " + cod + " superará 3 veces el mínimo.\n¿Continuar?",
+                    "Advertencia stock alto", JOptionPane.YES_NO_OPTION);
+                if (opc != JOptionPane.YES_OPTION) return;
+            }
+            if (tipo.equals("Salida") && cant > stockActual) {
+                JOptionPane.showMessageDialog(this,
+                    "Stock insuficiente para " + cod +
+                    "\nDisponible: " + stockActual + "   Solicitado: " + cant);
+                return;
+            }
+        }
+        escribirEncabezado(numero, fecha, tipo, motivo);
+        for (Map.Entry<String, Integer> entry : remision.entrySet()) {
+            escribirDetalle(numero, entry.getKey(), entry.getValue());
+            actualizarStock(inventario, entry.getKey(), entry.getValue(), tipo);
+        }
+        escribirInventario(inventario); 
+        JOptionPane.showMessageDialog(this, "Movimiento " + numero + " guardado correctamente");
+        modeloRemision.setRowCount(0);
+        jTextField4.setText(LocalDate.now().toString());
+        jTextField5.setText(String.valueOf(generarNumeroMovimiento()));
+        jTextField1.setText("");
+        jTextField2.setText("");
+        jTextField3.setText("");
+    }
+     
+    private boolean numeroYaExiste(int numero) {
+    try {
+        File f = new File(ENCABEZADO_CSV);
+
+        if (!f.exists()) {
+            return false;
+        }
+
+        BufferedReader br = new BufferedReader(new FileReader(f));
+        String linea;
+
+        while ((linea = br.readLine()) != null) {
+            String[] datos = linea.split(",");
+
+            if (datos[0].trim().equals(String.valueOf(numero))) {
+                br.close();
+                return true;
+            }
+        }
+
+        br.close();
+
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Error verificando número");
+    }
+
+    return false;
+}
+
+   private List<String[]> leerInventario() {
+
+    List<String[]> lista = new ArrayList<>();
+
+    try {
+
+        File f = new File(INVENTARIO_CSV);
+
+        if (!f.exists()) {
+            JOptionPane.showMessageDialog(this, "No existe productos.csv");
+            return null;
+        }
+
+        BufferedReader br = new BufferedReader(new FileReader(f));
+
+        String linea;
+
+        while ((linea = br.readLine()) != null) {
+            lista.add(linea.split(",", -1));
+        }
+
+        br.close();
+
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Error leyendo inventario");
+        return null;
+    }
+
+    return lista;
+}
+
+    private String[] buscarEnInventario(List<String[]> inventario, String codigo) {
+
+    for (String[] producto : inventario) {
+
+        if (producto[0].trim().equals(codigo)) {
+            return producto;
+        }
+    }
+
+    return null;
+}
+
+    private void escribirEncabezado(int numero, String fecha, String tipo, String motivo) {
+
+    try {
+
+        BufferedWriter bw = new BufferedWriter(
+                new FileWriter(ENCABEZADO_CSV, true)
+        );
+
+        bw.write(numero + "," + fecha + "," + tipo + "," + motivo);
+        bw.newLine();
+
+        bw.close();
+
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Error escribiendo encabezado");
+    }
+}
+
+    private void escribirDetalle(int numero, String codigo, int cantidad) {
+
+    try {
+
+        BufferedWriter bw = new BufferedWriter(
+                new FileWriter(DETALLE_CSV, true)
+        );
+
+        bw.write(numero + "," + codigo + "," + cantidad);
+        bw.newLine();
+
+        bw.close();
+
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Error escribiendo detalle");
+    }
+}
+
+    private void actualizarStock(List<String[]> inventario,
+        String codigo,
+        int cantidad,
+        String tipo) {
+
+    for (String[] producto : inventario) {
+
+        if (producto[0].trim().equals(codigo)) {
+
+            int stock = Integer.parseInt(producto[5].trim());
+
+            if (tipo.equals("Entrada")) {
+                stock += cantidad;
+            }
+
+            if (tipo.equals("Salida")) {
+                stock -= cantidad;
+            }
+
+            if (tipo.equals("Ajuste")) {
+                stock = cantidad;
+            }
+
+            producto[5] = String.valueOf(stock);
+        }
+    }
+}
+
+    private void escribirInventario(List<String[]> inventario) {
+
+    try {
+
+        BufferedWriter bw = new BufferedWriter(
+                new FileWriter(INVENTARIO_CSV)
+        );
+
+        for (String[] producto : inventario) {
+
+            bw.write(String.join(",", producto));
+            bw.newLine();
+        }
+
+        bw.close();
+
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Error actualizando inventario");
+    }
+}
+    
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -91,8 +426,18 @@ public class Inventario extends javax.swing.JFrame {
         jLabel9.setText("No.Movimiento ");
 
         jButton3.setText("Buscar");
+        jButton3.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton3ActionPerformed(evt);
+            }
+        });
 
         jButton4.setText("Agregar");
+        jButton4.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton4ActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
@@ -193,6 +538,11 @@ public class Inventario extends javax.swing.JFrame {
         jButton2.setFont(new java.awt.Font("Dubai", 3, 12)); // NOI18N
         jButton2.setIcon(new javax.swing.ImageIcon(getClass().getResource("/IMG/historial-de-pedidos.png"))); // NOI18N
         jButton2.setText("HISTORIAL");
+        jButton2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton2ActionPerformed(evt);
+            }
+        });
 
         jLabel10.setText("Registro de Entrada, Salida y ajustes de stock");
 
@@ -267,8 +617,40 @@ public class Inventario extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        // TODO add your handling code here:
+         // Abrir ventana Movimiento
+    Movimiento mov = new Movimiento(this, true);
+
+    // Oculta Inventario
+    this.setVisible(false);
+
+    // Mostrar ventana
+    mov.setVisible(true);
+
+    // Cuando cierre Movimiento regresa Inventario
+    this.setVisible(true);
     }//GEN-LAST:event_jButton1ActionPerformed
+
+    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+        // Abrir ventana Historial
+    Historial his = new Historial(this, true);
+
+    // Ocultar Inventario
+    this.setVisible(false);
+
+    // Mostrar ventana
+    his.setVisible(true);
+
+    // Cuando cierre Historial regresar Inventario
+    this.setVisible(true);
+    }//GEN-LAST:event_jButton2ActionPerformed
+
+    private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
+        buscarProducto();
+    }//GEN-LAST:event_jButton3ActionPerformed
+
+    private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
+         agregarRemision();
+    }//GEN-LAST:event_jButton4ActionPerformed
 
     /**
      * @param args the command line arguments
