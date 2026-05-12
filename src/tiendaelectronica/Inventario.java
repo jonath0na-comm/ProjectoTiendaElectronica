@@ -270,36 +270,38 @@ public class Inventario extends javax.swing.JFrame {
 }
 
     private void escribirEncabezado(int numero, String fecha, String tipo, String motivo) {
-
     try {
-
+        File archivo = new File(ENCABEZADO_CSV);
+        boolean existe = archivo.exists();
         BufferedWriter bw = new BufferedWriter(
-                new FileWriter(ENCABEZADO_CSV, true)
+                new FileWriter(archivo, true)
         );
-
+        if (!existe) {
+            bw.write("Numero,Fecha,Tipo,Motivo");
+            bw.newLine();
+        }
         bw.write(numero + "," + fecha + "," + tipo + "," + motivo);
         bw.newLine();
-
         bw.close();
-
     } catch (Exception e) {
         JOptionPane.showMessageDialog(this, "Error escribiendo encabezado");
     }
 }
 
     private void escribirDetalle(int numero, String codigo, int cantidad) {
-
     try {
-
+        File archivo = new File(DETALLE_CSV);
+        boolean existe = archivo.exists();
         BufferedWriter bw = new BufferedWriter(
-                new FileWriter(DETALLE_CSV, true)
+                new FileWriter(archivo, true)
         );
-
+        if (!existe) {
+            bw.write("Numero,Codigo,Cantidad");
+            bw.newLine();
+        }
         bw.write(numero + "," + codigo + "," + cantidad);
         bw.newLine();
-
         bw.close();
-
     } catch (Exception e) {
         JOptionPane.showMessageDialog(this, "Error escribiendo detalle");
     }
@@ -650,7 +652,17 @@ public class Inventario extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton3ActionPerformed
 
     private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
-         agregarRemision();
+    agregarRemision();
+    int opcion = JOptionPane.showConfirmDialog(
+        this,
+        "¿Deseas guardar el movimiento?",
+        "Confirmar",
+        JOptionPane.YES_NO_OPTION
+    );
+    if(opcion == JOptionPane.YES_OPTION){
+
+        guardarMovimiento();
+    }
     }//GEN-LAST:event_jButton4ActionPerformed
 
     /**

@@ -38,31 +38,72 @@ public class Movimiento extends javax.swing.JDialog {
     // Muestra: Código, Descripción, Stock Actual, Stock Mínimo, Estado
     // ═════════════════════════════════════════════
     public void cargarStock() {
-        DefaultTableModel modelo = (DefaultTableModel) jTable1.getModel();
-        modelo.setRowCount(0);
-        try {
-            BufferedReader br = new BufferedReader(new FileReader("productos.csv"));
-            String linea;
-            while ((linea = br.readLine()) != null) {
-                if (linea.trim().isEmpty()) continue;
-                String[] d = linea.split(",", -1);
-                if (d.length >= 9) {
-                    // d[0]=Código  d[1]=Descripción  d[5]=StockActual  d[6]=StockMínimo  d[8]=Estado
-                    modelo.addRow(new Object[]{
-                        d[0].trim(),
-                        d[1].trim(),
-                        d[5].trim(),
-                        d[6].trim(),
-                        d[8].trim()
-                    });
-                }
+
+    DefaultTableModel modelo = (DefaultTableModel) jTable1.getModel();
+
+    modelo.setRowCount(0);
+
+    try {
+
+        BufferedReader br = new BufferedReader(
+                new FileReader("productos.csv")
+        );
+
+        String linea;
+
+        while ((linea = br.readLine()) != null) {
+
+            if (linea.trim().isEmpty()) {
+                continue;
             }
-            br.close();
-        } catch (Exception e) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Error cargando stock");
+
+            String[] d = linea.split(",", -1);
+
+            if (d.length >= 9) {
+
+                int stockActual = Integer.parseInt(d[5].trim());
+
+                int stockMinimo = Integer.parseInt(d[6].trim());
+
+                String estadoStock = "";
+
+                if (stockActual == 0) {
+
+                    estadoStock = "AGOTADO";
+                }
+                else if (stockActual < stockMinimo) {
+
+                    estadoStock = "STOCK BAJO";
+                }
+                else if (stockActual > (stockMinimo * 3)) {
+
+                    estadoStock = "SOBREINVENTARIO";
+                }
+                else {
+
+                    estadoStock = "NORMAL";
+                }
+
+                modelo.addRow(new Object[]{
+                    d[0].trim(),
+                    d[1].trim(),
+                    stockActual,
+                    stockMinimo,
+                    estadoStock
+                });
+            }
         }
+
+        br.close();
+
+    } catch (Exception e) {
+
+        javax.swing.JOptionPane.showMessageDialog(
+                this,
+                "Error cargando stock"
+        );
     }
- 
+}
 
     /**
      * This method is called from within the constructor to initialize the form.
@@ -75,18 +116,16 @@ public class Movimiento extends javax.swing.JDialog {
 
         jToggleButton1 = new javax.swing.JToggleButton();
         jPanel1 = new javax.swing.JPanel();
-        jLabel2 = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
         jTable1 = new javax.swing.JTable();
+        jPanel2 = new javax.swing.JPanel();
+        jLabel2 = new javax.swing.JLabel();
 
         jToggleButton1.setText("jToggleButton1");
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
 
         jPanel1.setBackground(new java.awt.Color(255, 255, 255));
-
-        jLabel2.setFont(new java.awt.Font("Dubai Medium", 1, 18)); // NOI18N
-        jLabel2.setText("STOCK ACTUAL DE PRODUCTOS");
 
         jTable1.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
@@ -101,27 +140,45 @@ public class Movimiento extends javax.swing.JDialog {
         ));
         jScrollPane1.setViewportView(jTable1);
 
+        jPanel2.setBackground(new java.awt.Color(153, 255, 255));
+
+        jLabel2.setFont(new java.awt.Font("Dubai Medium", 1, 18)); // NOI18N
+        jLabel2.setText("STOCK ACTUAL DE PRODUCTOS");
+
+        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
+        jPanel2.setLayout(jPanel2Layout);
+        jPanel2Layout.setHorizontalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addGap(172, 172, 172)
+                .addComponent(jLabel2)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+        jPanel2Layout.setVerticalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel2)
+                .addContainerGap(15, Short.MAX_VALUE))
+        );
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+            .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 641, Short.MAX_VALUE)
                 .addContainerGap())
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(170, 170, 170)
-                .addComponent(jLabel2)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jLabel2)
-                .addGap(18, 18, 18)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 453, Short.MAX_VALUE)
-                .addContainerGap())
+                .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 467, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -178,6 +235,7 @@ public class Movimiento extends javax.swing.JDialog {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLabel jLabel2;
     private javax.swing.JPanel jPanel1;
+    private javax.swing.JPanel jPanel2;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTable jTable1;
     private javax.swing.JToggleButton jToggleButton1;
