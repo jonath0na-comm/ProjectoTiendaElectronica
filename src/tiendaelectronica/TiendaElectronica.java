@@ -3,7 +3,6 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Main.java to edit this template
  */
 package tiendaelectronica;
-
 /**
  *
  * @author Jonathan vargas arciniega 
@@ -11,16 +10,12 @@ package tiendaelectronica;
  * 
  */
 public class TiendaElectronica {
-
     /**
      * @param args the command line arguments
      */
      public static void main(String[] args) {
-        
-        // ← ESTO SE AGREGÓ
         java.awt.EventQueue.invokeLater(() -> {
             new Index().setVisible(true);
         });
-        
     }
 }

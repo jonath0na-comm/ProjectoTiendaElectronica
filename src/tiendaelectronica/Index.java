@@ -118,6 +118,7 @@ public class Index extends javax.swing.JFrame {
         ventana.setVisible(true);
         cargarTabla();
     }
+      
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -314,9 +315,22 @@ public class Index extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-    Inventario ventana = new Inventario();
-    ventana.setLocationRelativeTo(this); 
+     Inventario ventana = new Inventario();
+
+    ventana.setLocationRelativeTo(this);
+
+    ventana.addWindowListener(new java.awt.event.WindowAdapter() {
+        @Override
+        public void windowClosing(java.awt.event.WindowEvent e) {
+
+            Index index = new Index();
+            index.setLocationRelativeTo(null);
+            index.setVisible(true);
+        }
+    });
+
     ventana.setVisible(true);
+
     this.dispose();
     }//GEN-LAST:event_jButton1ActionPerformed
 
