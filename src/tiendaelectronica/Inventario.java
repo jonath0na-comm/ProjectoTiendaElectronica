@@ -15,13 +15,11 @@ import javax.swing.table.DefaultTableModel;
  * @author Jonat
  */
 public class Inventario extends javax.swing.JFrame {
-    
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Inventario.class.getName());
     private static final String INVENTARIO_CSV = "productos.csv";
     private static final String ENCABEZADO_CSV = "MovimientoInventarioEncabezado.csv";
     private static final String DETALLE_CSV    = "MovimientoInventarioDetalle.csv";
     private DefaultTableModel modeloRemision = new DefaultTableModel();
-    
     /**
      * Creates new form Inventario
      */
@@ -39,7 +37,6 @@ public class Inventario extends javax.swing.JFrame {
         jTextField5.setText(String.valueOf(generarNumeroMovimiento()));
  
     }
-    
     // 1. GENERAR número de movimiento Lee el encabezado, obtiene el número más alto y suma 1
     private int generarNumeroMovimiento() {
         int max = 0;
@@ -66,160 +63,108 @@ public class Inventario extends javax.swing.JFrame {
     
     // 2. BUSCAR producto por código en producto Llena jTextField3 con el nombre del producto
     private void buscarProducto() {
-
     String codigo = jTextField1.getText().trim();
-
     if (codigo.isEmpty()) {
-
         JOptionPane.showMessageDialog(this,
                 "Ingresa un código");
-
         return;
     }
-
     try {
-
         BufferedReader br = new BufferedReader(
                 new FileReader(INVENTARIO_CSV)
         );
-
         String linea;
-
         while ((linea = br.readLine()) != null) {
-
             if (linea.trim().isEmpty()) {
                 continue;
             }
-
             String[] d = linea.split(",", -1);
-
             if (d.length >= 2) {
-
                 String clave = d[0].trim();
-
                 if (clave.equalsIgnoreCase(codigo)) {
-
                    jTextField3.setText(d[1].trim());
                    System.out.println("TEXTO DEL CAMPO: " + jTextField3.getText());
-
                     br.close();
-
                     jTextField2.requestFocus();
-
                     return;
                 }
             }
         }
-
         br.close();
-
         JOptionPane.showMessageDialog(this,
                 "Código no encontrado");
-
     } catch (Exception e) {
-
         JOptionPane.showMessageDialog(this,
                 "Error buscando producto");
     }
 }
-    
     // 3. AGREGAR producto a la tabla de remisión
     private void agregarRemision() {
-
     String codigo = jTextField1.getText().trim();
     String nombre = jTextField3.getText().trim();
     String cantTxt = jTextField2.getText().trim();
-
     if (codigo.isEmpty() || nombre.isEmpty()) {
-
         JOptionPane.showMessageDialog(this,
                 "Primero busca un producto válido");
-
         return;
     }
-
     if (cantTxt.isEmpty()) {
-
         JOptionPane.showMessageDialog(this,
                 "Ingresa la cantidad");
-
         return;
     }
-
     try {
-
         int cantidad = Integer.parseInt(cantTxt);
-
         if (cantidad <= 0) {
-
             JOptionPane.showMessageDialog(this,
                     "La cantidad debe ser mayor a 0");
-
             return;
         }
-
         // VALIDAR DUPLICADOS
         for (int i = 0; i < modeloRemision.getRowCount(); i++) {
-
             String productoTabla = modeloRemision
                     .getValueAt(i, 1)
                     .toString();
-
             String codigoTabla = productoTabla
                     .split(" - ")[0]
                     .trim();
-
             if (codigoTabla.equals(codigo)) {
-
                 int cantidadActual = Integer.parseInt(
                         modeloRemision
                                 .getValueAt(i, 0)
                                 .toString()
                 );
-
                 modeloRemision.setValueAt(
                         cantidadActual + cantidad,
                         i,
                         0
                 );
-
                 limpiarCamposProducto();
-
                 return;
             }
         }
-
         modeloRemision.addRow(new Object[]{
             cantidad,
             codigo + " - " + nombre
         });
-
         limpiarCamposProducto();
-
     } catch (NumberFormatException e) {
-
         JOptionPane.showMessageDialog(this,
                 "La cantidad debe ser un número entero");
     }
 }
     private void limpiarCamposProducto() {
-
     jTextField1.setText("");
     jTextField2.setText("");
     jTextField3.setText("");
-
     jTextField1.requestFocus();
 }
-
-    
     // 4. GUARDAR MOVIMIENTO COMPLETO Valida → escribe CSVs → actualiza stock
     private void guardarMovimiento() {
-
     String numeroTxt = jTextField5.getText().trim();
     String fecha = jTextField4.getText().trim();
     String tipo = jComboBox1.getSelectedItem().toString();
     String motivo = jTextField6.getText().trim();
-
     // VALIDAR FECHA
     try {
         LocalDate.parse(fecha);
@@ -228,87 +173,63 @@ public class Inventario extends javax.swing.JFrame {
                 "Fecha inválida.\nFormato correcto: yyyy-MM-dd");
         return;
     }
-
     // VALIDAR MOTIVO
     if (tipo.equals("Ajuste") && motivo.isEmpty()) {
         JOptionPane.showMessageDialog(this,
                 "El motivo es obligatorio para Ajustes");
         return;
     }
-
     // VALIDAR REMISION
     if (modeloRemision.getRowCount() == 0) {
         JOptionPane.showMessageDialog(this,
                 "Agrega al menos un producto");
         return;
     }
-
     int numero = Integer.parseInt(numeroTxt);
-
     // VALIDAR DUPLICADO
     if (numeroYaExiste(numero)) {
         JOptionPane.showMessageDialog(this,
                 "El número de movimiento ya existe");
         return;
     }
-
     // MAPA DE PRODUCTOS
     Map<String, Integer> remision = new LinkedHashMap<>();
-
     for (int i = 0; i < modeloRemision.getRowCount(); i++) {
-
         int cantidad = Integer.parseInt(
                 modeloRemision.getValueAt(i, 0).toString()
         );
-
         String producto = modeloRemision.getValueAt(i, 1).toString();
-
         String codigo = producto.split(" - ")[0].trim();
-
         remision.put(codigo, cantidad);
     }
-
     // LEER INVENTARIO
     List<String[]> inventario = leerInventario();
-
     if (inventario == null) {
         return;
     }
-
     // VALIDACIONES
     for (Map.Entry<String, Integer> entry : remision.entrySet()) {
-
         String codigo = entry.getKey();
         int cantidad = entry.getValue();
-
         String[] prod = buscarEnInventario(inventario, codigo);
-
         if (prod == null) {
-
             JOptionPane.showMessageDialog(this,
                     "Producto no encontrado: " + codigo);
-
             return;
         }
-
         // VALIDAR PRODUCTO INACTIVO
         if (!tipo.equals("Ajuste")
                 && prod[8].trim().equalsIgnoreCase("INACTIVO")) {
-
             JOptionPane.showMessageDialog(this,
                     "El producto " + codigo
                     + " está deshabilitado.\nSolo permite ajustes.");
-
             return;
         }
-
         int stockActual = Integer.parseInt(prod[5].trim());
         int stockMinimo = Integer.parseInt(prod[6].trim());
-
         // SOBRE INVENTARIO
         if (tipo.equals("Entrada")
                 && (stockActual + cantidad) > (stockMinimo * 3)) {
-
             int opc = JOptionPane.showConfirmDialog(
                     this,
                     "El producto " + codigo
@@ -316,37 +237,29 @@ public class Inventario extends javax.swing.JFrame {
                     "Advertencia",
                     JOptionPane.YES_NO_OPTION
             );
-
             if (opc != JOptionPane.YES_OPTION) {
                 return;
             }
         }
-
         // STOCK INSUFICIENTE
         if (tipo.equals("Salida")
                 && cantidad > stockActual) {
-
             JOptionPane.showMessageDialog(this,
                     "Stock insuficiente para "
                     + codigo
                     + "\nDisponible: " + stockActual
                     + "\nSolicitado: " + cantidad);
-
             return;
         }
     }
-
     // GUARDAR
     escribirEncabezado(numero, fecha, tipo, motivo);
-
     for (Map.Entry<String, Integer> entry : remision.entrySet()) {
-
         escribirDetalle(
                 numero,
                 entry.getKey(),
                 entry.getValue()
         );
-
         actualizarStock(
                 inventario,
                 entry.getKey(),
@@ -354,125 +267,87 @@ public class Inventario extends javax.swing.JFrame {
                 tipo
         );
     }
-
     escribirInventario(inventario);
-
     JOptionPane.showMessageDialog(this,
             "Movimiento guardado correctamente");
-
     limpiarFormulario();
 }
     private void limpiarFormulario() {
-
     modeloRemision.setRowCount(0);
-
     jTextField1.setText("");
     jTextField2.setText("");
     jTextField3.setText("");
     jTextField6.setText("");
-
     jTextField4.setText(LocalDate.now().toString());
-
     jTextField5.setText(
             String.valueOf(generarNumeroMovimiento())
     );
-
     jTextField1.requestFocus();
 }
-     
     private boolean numeroYaExiste(int numero) {
     try {
         File f = new File(ENCABEZADO_CSV);
-
         if (!f.exists()) {
             return false;
         }
-
         BufferedReader br = new BufferedReader(new FileReader(f));
         String linea;
-
         while ((linea = br.readLine()) != null) {
             String[] datos = linea.split(",");
-
             if (datos[0].trim().equals(String.valueOf(numero))) {
                 br.close();
                 return true;
             }
         }
-
         br.close();
-
     } catch (Exception e) {
         JOptionPane.showMessageDialog(this, "Error verificando número");
     }
-
     return false;
 }
+    
     private List<String[]> leerInventario() {
-
     List<String[]> lista = new ArrayList<>();
-
     try {
-
         File f = new File(INVENTARIO_CSV);
-
         if (!f.exists()) {
 
             JOptionPane.showMessageDialog(this,
                     "No existe productos.csv");
-
             return null;
         }
-
         BufferedReader br = new BufferedReader(
                 new FileReader(f)
         );
-
         String linea;
-
         boolean primera = true;
-
         while ((linea = br.readLine()) != null) {
-
             // IGNORAR ENCABEZADO
             if (primera) {
                 primera = false;
                 continue;
             }
-
             if (linea.trim().isEmpty()) {
                 continue;
             }
-
             lista.add(linea.split(",", -1));
         }
-
         br.close();
-
     } catch (Exception e) {
-
         JOptionPane.showMessageDialog(this,
                 "Error leyendo inventario");
-
         return null;
     }
-
     return lista;
 }
-          
-
     private String[] buscarEnInventario(List<String[]> inventario, String codigo) {
-
     for (String[] producto : inventario) {
-
         if (producto[0].trim().equals(codigo)) {
             return producto;
         }
     }
-
     return null;
 }
-
     private void escribirEncabezado(int numero, String fecha, String tipo, String motivo) {
     try {
         File archivo = new File(ENCABEZADO_CSV);
@@ -510,51 +385,36 @@ public class Inventario extends javax.swing.JFrame {
         JOptionPane.showMessageDialog(this, "Error escribiendo detalle");
     }
 }
-
     private void actualizarStock(List<String[]> inventario,
         String codigo,
         int cantidad,
         String tipo) {
-
     for (String[] producto : inventario) {
-
         if (producto[0].trim().equals(codigo)) {
-
             int stock = Integer.parseInt(producto[5].trim());
-
             if (tipo.equals("Entrada")) {
                 stock += cantidad;
             }
-
             if (tipo.equals("Salida")) {
                 stock -= cantidad;
             }
-
             if (tipo.equals("Ajuste")) {
                 stock = cantidad;
             }
-
             producto[5] = String.valueOf(stock);
         }
     }
 }
-
     private void escribirInventario(List<String[]> inventario) {
-
     try {
-
         BufferedWriter bw = new BufferedWriter(
                 new FileWriter(INVENTARIO_CSV)
         );
-
         for (String[] producto : inventario) {
-
             bw.write(String.join(",", producto));
             bw.newLine();
         }
-
         bw.close();
-
     } catch (Exception e) {
         JOptionPane.showMessageDialog(this, "Error actualizando inventario");
     }
