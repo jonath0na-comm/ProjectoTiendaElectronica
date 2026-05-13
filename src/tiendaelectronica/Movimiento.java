@@ -27,63 +27,41 @@ public class Movimiento extends javax.swing.JDialog {
     modelo.addColumn("Stock Actual");
     modelo.addColumn("Stock Mínimo");
     modelo.addColumn("Estado");
-
     jTable1.setModel(modelo);
-
     // Cargar datos automáticamente
     cargarStock();
     }
-      // ═════════════════════════════════════════════
-    // CARGAR STOCK — lee productos.csv y llena la tabla
-    // Muestra: Código, Descripción, Stock Actual, Stock Mínimo, Estado
-    // ═════════════════════════════════════════════
+    
+    // CARGAR STOCK — lee productos.csv y llena la tabla Muestra: Código, Descripción, Stock Actual, Stock Mínimo, Estado  // ═════════════════════════════════════════════
     public void cargarStock() {
-
     DefaultTableModel modelo = (DefaultTableModel) jTable1.getModel();
-
     modelo.setRowCount(0);
-
     try {
-
         BufferedReader br = new BufferedReader(
                 new FileReader("productos.csv")
         );
-
         String linea;
-
         while ((linea = br.readLine()) != null) {
-
             if (linea.trim().isEmpty()) {
                 continue;
             }
-
             String[] d = linea.split(",", -1);
-
             if (d.length >= 9) {
-
                 int stockActual = Integer.parseInt(d[5].trim());
-
                 int stockMinimo = Integer.parseInt(d[6].trim());
-
                 String estadoStock = "";
-
                 if (stockActual == 0) {
-
                     estadoStock = "AGOTADO";
                 }
                 else if (stockActual < stockMinimo) {
-
                     estadoStock = "STOCK BAJO";
                 }
                 else if (stockActual > (stockMinimo * 3)) {
-
                     estadoStock = "SOBREINVENTARIO";
                 }
                 else {
-
                     estadoStock = "NORMAL";
                 }
-
                 modelo.addRow(new Object[]{
                     d[0].trim(),
                     d[1].trim(),
@@ -93,18 +71,14 @@ public class Movimiento extends javax.swing.JDialog {
                 });
             }
         }
-
         br.close();
-
     } catch (Exception e) {
-
         javax.swing.JOptionPane.showMessageDialog(
                 this,
                 "Error cargando stock"
         );
     }
 }
-
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
