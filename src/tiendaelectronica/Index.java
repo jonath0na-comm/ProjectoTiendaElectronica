@@ -166,6 +166,11 @@ public class Index extends javax.swing.JFrame {
         jButton3.setForeground(new java.awt.Color(255, 255, 255));
         jButton3.setText("CONFIGURACIÓN");
         jButton3.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        jButton3.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton3ActionPerformed(evt);
+            }
+        });
 
         jButton4.setBackground(new java.awt.Color(30, 58, 95));
         jButton4.setFont(new java.awt.Font("Dialog", 1, 12)); // NOI18N
@@ -374,6 +379,27 @@ public class Index extends javax.swing.JFrame {
     private void jTable1MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTable1MouseClicked
            llenarFormulario();
     }//GEN-LAST:event_jTable1MouseClicked
+
+    private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
+         Configuración ventana = new Configuración(this, true);
+
+    ventana.setLocationRelativeTo(this);
+
+    ventana.addWindowListener(new java.awt.event.WindowAdapter() {
+        @Override
+        public void windowClosing(java.awt.event.WindowEvent e) {
+
+            Index index = new Index();
+            index.setLocationRelativeTo(null);
+            index.setVisible(true);
+        }
+    });
+
+    ventana.setVisible(true);
+
+    this.dispose();
+
+    }//GEN-LAST:event_jButton3ActionPerformed
 //
     /**
      * @param args the command line arguments

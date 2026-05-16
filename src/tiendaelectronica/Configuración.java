@@ -4,6 +4,15 @@
  */
 package tiendaelectronica;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.text.DecimalFormat;
+import javax.swing.JOptionPane;
+
 /**
  *
  * @author Jonat
@@ -11,13 +20,261 @@ package tiendaelectronica;
 public class Configuración extends javax.swing.JDialog {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(Configuración.class.getName());
-
-    /**
-     * Creates new form Configuración
-     */
+    private static final String ARCHIVO_CONFIG = "configuracion.csv";
+    
+    private double costoPorPedido = 0.0;
+    private double costoMantenimiento = 0.0;
+    private int tiempoEntrega = 0;
+ 
     public Configuración(java.awt.Frame parent, boolean modal) {
         super(parent, modal);
         initComponents();
+        cargarConfiguracion();
+    }
+ 
+    // ═════════════════════════════════════════════════════════════════════
+    // CARGAR CONFIGURACIÓN
+    // ═════════════════════════════════════════════════════════════════════
+    private void cargarConfiguracion() {
+        try {
+            File archivo = new File(ARCHIVO_CONFIG);
+            
+            if (archivo.exists()) {
+                try (BufferedReader br = new BufferedReader(new FileReader(archivo))) {
+                    String linea;
+                    boolean primera = true;
+                    
+                    while ((linea = br.readLine()) != null) {
+                        if (primera) {
+                            primera = false;
+                            continue;
+                        }
+                        
+                        String[] datos = linea.split(",", -1);
+                        if (datos.length >= 3) {
+                            try {
+                                costoPorPedido = Double.parseDouble(datos[0].trim());
+                                costoMantenimiento = Double.parseDouble(datos[1].trim());
+                                tiempoEntrega = Integer.parseInt(datos[2].trim());
+                            } catch (NumberFormatException e) {
+                                costoPorPedido = 0.0;
+                                costoMantenimiento = 0.0;
+                                tiempoEntrega = 0;
+                            }
+                        }
+                    }
+                }
+                
+                mostrarValoresEnCampos();
+            } else {
+                jTextField1.setText("");
+                jTextField2.setText("");
+                jTextField3.setText("");
+            }
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al cargar la configuración: " + e.getMessage(),
+                    "Error de Carga",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+ 
+    // ═════════════════════════════════════════════════════════════════════
+    // MOSTRAR VALORES EN CAMPOS
+    // ═════════════════════════════════════════════════════════════════════
+    private void mostrarValoresEnCampos() {
+        DecimalFormat df = new DecimalFormat("0.00");
+        
+        if (costoPorPedido > 0) {
+            jTextField1.setText(df.format(costoPorPedido));
+        } else {
+            jTextField1.setText("");
+        }
+        
+        if (costoMantenimiento > 0) {
+            jTextField2.setText(df.format(costoMantenimiento));
+        } else {
+            jTextField2.setText("");
+        }
+        
+        if (tiempoEntrega > 0) {
+            jTextField3.setText(String.valueOf(tiempoEntrega));
+        } else {
+            jTextField3.setText("");
+        }
+    }
+ 
+    // ═════════════════════════════════════════════════════════════════════
+    // VALIDAR DATOS
+    // ═════════════════════════════════════════════════════════════════════
+    private boolean validarDatos() {
+        String txt1 = jTextField1.getText().trim();
+        String txt2 = jTextField2.getText().trim();
+        String txt3 = jTextField3.getText().trim();
+        
+        if (txt1.isEmpty() || txt2.isEmpty() || txt3.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Todos los campos son obligatorios",
+                    "Validación de Datos",
+                    JOptionPane.WARNING_MESSAGE);
+            return false;
+        }
+        
+        try {
+            double costo = Double.parseDouble(txt1);
+            if (costo <= 0) {
+                JOptionPane.showMessageDialog(this,
+                        "El costo por pedido debe ser mayor a 0",
+                        "Validación de Datos",
+                        JOptionPane.WARNING_MESSAGE);
+                jTextField1.requestFocus();
+                return false;
+            }
+            
+            double mantenimiento = Double.parseDouble(txt2);
+            if (mantenimiento <= 0) {
+                JOptionPane.showMessageDialog(this,
+                        "El costo de mantenimiento debe ser mayor a 0",
+                        "Validación de Datos",
+                        JOptionPane.WARNING_MESSAGE);
+                jTextField2.requestFocus();
+                return false;
+            }
+            
+            if (txt3.contains(".") || txt3.contains(",")) {
+                JOptionPane.showMessageDialog(this,
+                        "El tiempo de entrega debe ser un número entero (sin decimales)",
+                        "Validación de Datos",
+                        JOptionPane.WARNING_MESSAGE);
+                jTextField3.requestFocus();
+                return false;
+            }
+            
+            int entrega = Integer.parseInt(txt3);
+            if (entrega <= 0) {
+                JOptionPane.showMessageDialog(this,
+                        "El tiempo de entrega debe ser mayor a 0",
+                        "Validación de Datos",
+                        JOptionPane.WARNING_MESSAGE);
+                jTextField3.requestFocus();
+                return false;
+            }
+            
+            costoPorPedido = costo;
+            costoMantenimiento = mantenimiento;
+            tiempoEntrega = entrega;
+            
+            return true;
+            
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this,
+                    "Los valores deben ser numéricos",
+                    "Error de Formato",
+                    JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+    }
+ 
+    // ═════════════════════════════════════════════════════════════════════
+    // GUARDAR CONFIGURACIÓN
+    // ═════════════════════════════════════════════════════════════════════
+    private void guardarConfiguracion() {
+        try {
+            try (PrintWriter pw = new PrintWriter(new FileWriter(ARCHIVO_CONFIG))) {
+                pw.println("CostoPorPedido,CostoMantenimiento,TiempoEntrega");
+                
+                DecimalFormat df = new DecimalFormat("0.00");
+                pw.println(df.format(costoPorPedido) + "," 
+                        + df.format(costoMantenimiento) + "," 
+                        + tiempoEntrega);
+            }
+            
+            JOptionPane.showMessageDialog(this,
+                    "Configuración actualizada correctamente",
+                    "Éxito",
+                    JOptionPane.INFORMATION_MESSAGE);
+            
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al guardar la configuración: " + e.getMessage(),
+                    "Error de Guardado",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+ 
+    // ═════════════════════════════════════════════════════════════════════
+    // MÉTODOS ESTÁTICOS PARA ACCEDER A LA CONFIGURACIÓN
+    // ═════════════════════════════════════════════════════════════════════
+    public static double obtenerCostoPorPedido() {
+        try {
+            File archivo = new File(ARCHIVO_CONFIG);
+            if (archivo.exists()) {
+                try (BufferedReader br = new BufferedReader(new FileReader(archivo))) {
+                    String linea;
+                    boolean primera = true;
+                    while ((linea = br.readLine()) != null) {
+                        if (primera) {
+                            primera = false;
+                            continue;
+                        }
+                        String[] datos = linea.split(",", -1);
+                        if (datos.length >= 1) {
+                            return Double.parseDouble(datos[0].trim());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+        }
+        return 0.0;
+    }
+ 
+    public static double obtenerCostoMantenimiento() {
+        try {
+            File archivo = new File(ARCHIVO_CONFIG);
+            if (archivo.exists()) {
+                try (BufferedReader br = new BufferedReader(new FileReader(archivo))) {
+                    String linea;
+                    boolean primera = true;
+                    while ((linea = br.readLine()) != null) {
+                        if (primera) {
+                            primera = false;
+                            continue;
+                        }
+                        String[] datos = linea.split(",", -1);
+                        if (datos.length >= 2) {
+                            return Double.parseDouble(datos[1].trim());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+        }
+        return 0.0;
+    }
+ 
+    public static int obtenerTiempoEntrega() {
+        try {
+            File archivo = new File(ARCHIVO_CONFIG);
+            if (archivo.exists()) {
+                try (BufferedReader br = new BufferedReader(new FileReader(archivo))) {
+                    String linea;
+                    boolean primera = true;
+                    while ((linea = br.readLine()) != null) {
+                        if (primera) {
+                            primera = false;
+                            continue;
+                        }
+                        String[] datos = linea.split(",", -1);
+                        if (datos.length >= 3) {
+                            return Integer.parseInt(datos[2].trim());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+        }
+        return 0;
     }
 
     /**
